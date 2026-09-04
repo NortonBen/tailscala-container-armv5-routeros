@@ -67,7 +67,7 @@ uploading:
 ```
 
 ```
-/container/add remote-image=nortonben/tailscale-armv5:latest interface=veth-ts root-dir=usb1/ts-root logging=yes start-on-boot=yes
+/container/add remote-image=nortonben/tailscale-armv5:0.2.0 interface=veth-ts root-dir=usb1/ts-root logging=yes start-on-boot=yes
 ```
 
 Full procedure, including the network and USB setup those commands assume:
@@ -136,7 +136,8 @@ GOARM=6 and GOARM=7 builds.
 | `tailscale-cli.sh` | Wrapper that re-enters the combined binary in CLI mode |
 | `.github/workflows/publish.yml` | Builds, verifies and publishes to ghcr.io |
 | `docs/routeros-install.md` | Router-side procedure |
-| `docs/publishing.md` | How the image is published, and making the package public |
+| `docs/publishing.md` | How the image is published |
+| `docs/versions.md` | Which release contains which Tailscale, and how to cut one |
 
 ## Worth knowing before you commit to this
 

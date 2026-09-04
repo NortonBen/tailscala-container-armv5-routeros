@@ -25,12 +25,20 @@ COPY start.sh   /start.sh
 ARG TS_ROUTES
 ARG TS_HOSTNAME
 ARG SOURCE_URL
+ARG IMAGE_VERSION
+ARG TS_VERSION
 
 # image.source is what makes a GitHub Container Registry package link back to
 # the repository that produced it.
+#
+# The tag is a release number, so it does not say which Tailscale is inside.
+# tailscale.version records that on the image itself, which keeps the version
+# map in docs/versions.md checkable rather than something that quietly drifts.
 LABEL org.opencontainers.image.source="${SOURCE_URL}" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
       org.opencontainers.image.title="Tailscale for MikroTik ARMv5" \
-      org.opencontainers.image.description="Tailscale subnet router for RouterOS on EN7562CT (hEX Refresh), the ARMv5 target no official image supports"
+      org.opencontainers.image.description="Tailscale subnet router for RouterOS on EN7562CT (hEX Refresh), the ARMv5 target no official image supports" \
+      tailscale.version="${TS_VERSION}"
 
 # Defaults only. RouterOS can override any of these through /container/envs,
 # so renumbering the LAN does not mean rebuilding the image.

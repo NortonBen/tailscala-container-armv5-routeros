@@ -106,6 +106,8 @@ stage_image() {
         --build-arg "TS_ROUTES=${TS_ROUTES}" \
         --build-arg "TS_HOSTNAME=${TS_HOSTNAME}" \
         --build-arg "SOURCE_URL=${SOURCE_URL}" \
+        --build-arg "IMAGE_VERSION=${IMAGE_TAG}" \
+        --build-arg "TS_VERSION=${TAILSCALE_VERSION}" \
         --tag "$IMAGE_REF" \
         --file Dockerfile \
         --output "type=oci,dest=${OCI_TAR}" \

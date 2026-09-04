@@ -7,9 +7,11 @@ name: publish
 # RouterOS asks the registry for arch=arm archVariant=v5, and unlike the
 # official Tailscale image, this one actually has it.
 
+# Releases are cut by tagging. A dispatch run builds and verifies but does not
+# publish, so the only way an image reaches the registry is from a tag that
+# points at a specific commit.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -34,11 +36,15 @@ jobs:
       # docker-container driver that can.
       - uses: docker/setup-buildx-action@v3
 
-      - name: Resolve registry namespace
+      - name: Resolve image coordinates
         id: img
         run: |
           # ghcr.io requires a lowercase namespace; GitHub owners need not be.
           echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          # The image tag mirrors the release tag: v0.2.0 publishes :0.2.0.
+          # On a dispatch run this is a branch name, which is harmless because
+          # the publish step below only runs for tags.
+          echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       # verify is the gate: it fails the run on a non-ARMv5 binary or an
       # archive RouterOS could not import, rather than publishing something
@@ -46,11 +52,14 @@ jobs:
       - name: Build, convert and verify
         env:
           SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+          IMAGE_TAG: ${{ steps.img.outputs.tag }}
         run: ./make.sh binaries image archive verify
 
       - name: Publish to ghcr.io
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           IMAGE_REGISTRY: ${{ steps.img.outputs.registry }}
+          IMAGE_TAG: ${{ steps.img.outputs.tag }}
           REGISTRY_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
         run: ./make.sh push
 

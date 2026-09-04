@@ -44,15 +44,23 @@ syspolicy oauthkey serve ssh tailnetlock portlist posture outboundproxy \
 identityfederation flashappliance netlog sdnotify}"
 
 IMAGE_NAME="${IMAGE_NAME:-tailscale-armv5}"
-IMAGE_TAG="${IMAGE_TAG:-${TAILSCALE_VERSION#v}}"
+
+# The image tag mirrors this repository's release tag: pushing git tag v0.2.0
+# publishes :0.2.0. A tree that is not sitting on a tag builds as "dev", so a
+# published tag always maps back to a known commit.
+IMAGE_TAG="${IMAGE_TAG:-$(git describe --tags --exact-match 2>/dev/null | sed 's/^v//' || true)}"
+: "${IMAGE_TAG:=dev}"
 
 # Registry to publish to, without the image name -- e.g. "ghcr.io/youruser".
 # Only the push stage reads it; local builds do not need it set. The push
 # stage also needs REGISTRY_AUTH ("user:token") in the environment.
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-}"
 
-# Tags published alongside IMAGE_TAG.
-PUSH_EXTRA_TAGS="${PUSH_EXTRA_TAGS:-latest}"
+# Extra tags published alongside IMAGE_TAG. Empty on purpose: a moving
+# "latest" hides which build a router actually pulled, and re-pulling it can
+# change Tailscale versions underneath you. When the container is your way
+# back into the network, that is worth avoiding -- pin a version instead.
+PUSH_EXTRA_TAGS="${PUSH_EXTRA_TAGS:-}"
 
 # Recorded in the image so a registry can link the package back to the
 # repository it was built from.

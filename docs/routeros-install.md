@@ -118,13 +118,14 @@ unpacked into internal flash during the pull, which on a nearly-full or
 failing NAND is exactly the wrong place.
 
 ```
-/container/add remote-image=nortonben/tailscale-armv5:latest \
+/container/add remote-image=nortonben/tailscale-armv5:0.2.0 \
     interface=veth-ts root-dir=usb1/ts-root mountlists=ts-state \
     logging=yes start-on-boot=yes hostname=hex-router
 ```
 
-> The GitHub package must be **public**, or the router gets a 401. New packages
-> are private by default — see [publishing.md](publishing.md).
+> The router pulls anonymously, so the package has to be public — otherwise it
+> gets a 401. Published from a public repository it normally already is; the
+> check is in [publishing.md](publishing.md).
 
 Watch it download and unpack:
 
@@ -134,8 +135,11 @@ Watch it download and unpack:
 
 Then skip to [step 7](#7-authenticate-and-approve-the-routes).
 
-To pin a specific version instead of tracking `latest`, use the Tailscale
-version as the tag, e.g. `nortonben/tailscale-armv5:1.102.3`.
+**Always name a version.** There is deliberately no `latest` tag: a moving tag
+means a container you recreate later can come back with a different Tailscale,
+and if that goes wrong you are no longer on the network to fix it. Which
+Tailscale each release contains is listed in
+[the version map](versions.md).
 
 ---
 
