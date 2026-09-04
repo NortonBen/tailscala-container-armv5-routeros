@@ -52,22 +52,32 @@ build_tags() {
 
 stage_binaries() {
     require_docker
-    mkdir -p "$STAGE_DIR" "${CACHE_DIR}/gomod" "${CACHE_DIR}/gocache"
+    mkdir -p "$STAGE_DIR" "${CACHE_DIR}/go" "${CACHE_DIR}/gobuild"
 
     local tags
     tags="$(build_tags)"
 
     log "Cross-compiling Tailscale ${TAILSCALE_VERSION} for linux/arm/v5"
+    # Run as the invoking user rather than the image's root. On Linux a bind
+    # mount keeps real ownership, so a root-owned staging/tailscaled is one
+    # the caller can no longer chmod or clean up -- which is a build failure
+    # on CI. macOS hides this by remapping ownership to the host user.
+    #
+    # HOME, GOPATH and GOCACHE are redirected because the image's defaults
+    # (/root, /go) are not writable once we are not root.
     docker run --rm \
+        --user "$(id -u):$(id -g)" \
         -v "${ROOT}/${STAGE_DIR}:/out" \
-        -v "${ROOT}/${CACHE_DIR}/gomod:/go/pkg/mod" \
-        -v "${ROOT}/${CACHE_DIR}/gocache:/root/.cache/go-build" \
+        -v "${ROOT}/${CACHE_DIR}:/cache" \
+        -e HOME=/cache \
+        -e GOPATH=/cache/go \
+        -e GOCACHE=/cache/gobuild \
         -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=arm -e GOARM=5 \
         "$GO_IMAGE" \
         sh -euc "
             go install -trimpath -tags '${tags}' -ldflags='-s -w' \
                 'tailscale.com/cmd/tailscaled@${TAILSCALE_VERSION}'
-            cp /go/bin/linux_arm/tailscaled /out/
+            cp \"\${GOPATH}/bin/linux_arm/tailscaled\" /out/
         "
     chmod 0755 "${STAGE_DIR}/tailscaled"
 }
