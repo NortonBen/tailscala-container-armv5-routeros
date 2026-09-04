@@ -22,23 +22,29 @@ so they are the same image rather than two builds that ought to agree.
 
 No secrets to configure: it authenticates with the automatic `GITHUB_TOKEN`.
 
-## Make the package public
+## Check the package is publicly pullable
 
-**Required, and easy to miss.** A new GHCR package is private, and a router
-pulling it gets a 401 with no useful explanation.
+The router pulls anonymously, so the package has to be public. Published from
+a public repository it generally already is, but confirm rather than assume —
+a private package answers a router with a 401 and no useful explanation.
 
-After the first successful run:
-
-1. Open the package — `https://github.com/users/<owner>/packages/container/tailscale-armv5`,
-   or the **Packages** section of your profile.
-2. **Package settings** → **Danger Zone** → **Change visibility** → **Public**.
-
-Verify anonymously, which is what the router does:
+This is the check that matters, because it is what the router actually does:
 
 ```bash
-curl -s "https://ghcr.io/token?scope=repository:<owner>/tailscale-armv5:pull" \
-  | grep -q token && echo "package is publicly pullable"
+TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:<owner>/tailscale-armv5:pull&service=ghcr.io" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $TOKEN" \
+  -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+  https://ghcr.io/v2/<owner>/tailscale-armv5/manifests/latest
 ```
+
+`200` means the router can pull it. A `401` means it is private — fix it at
+the package page (**Package settings** → **Danger Zone** → **Change
+visibility** → **Public**), reachable from the **Packages** section of your
+profile.
+
+Note the token endpoint hands out a token even for a package you cannot read,
+so "did I get a token" proves nothing on its own. Check the manifest.
 
 If you would rather keep it private, RouterOS can authenticate — set
 `registry-user` and `registry-password` under `/container/config` with a
