@@ -14,6 +14,21 @@ is where that mapping lives.
 compatibility limit: the image is a plain ARMv5 container and does not depend
 on the RouterOS version.
 
+**Retired tags are no longer published, but they do not disappear on their
+own.** Until someone deletes them they still resolve, and `latest` in
+particular is now frozen on an old build while looking like the current one —
+which is exactly the failure mode it was dropped for. Deleting them needs a
+token with `delete:packages`, which CI deliberately does not have:
+
+```bash
+gh api -X DELETE \
+  "/user/packages/container/tailscale-armv5/versions/<version-id>"
+```
+
+Version ids come from `gh api /user/packages/container/tailscale-armv5/versions`,
+which lists the tags on each. The package page under **Package settings** does
+the same thing with a mouse.
+
 ## Checking an image instead of trusting this table
 
 Every image records its own versions, so you never have to take the table's
