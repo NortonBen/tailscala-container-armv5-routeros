@@ -1,0 +1,11 @@
+# Cross-compiled binaries and the intermediate OCI archive.
+staging/
+
+# The artifact uploaded to the router. Regenerate with ./make.sh rather than
+# committing it: it is ~30 MB and reproducible from the pinned version.
+dist/
+
+# Go module and compiler caches, kept between runs to make rebuilds fast.
+.cache/
+
+.DS_Store

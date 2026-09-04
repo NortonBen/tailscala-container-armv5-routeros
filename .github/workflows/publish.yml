@@ -1,0 +1,70 @@
+name: publish
+
+# Publishes the ARMv5 image to GitHub Container Registry, and attaches the
+# RouterOS-importable tar to a release on tag builds.
+#
+# The image is what makes remote-image= installs possible on a hEX Refresh:
+# RouterOS asks the registry for arch=arm archVariant=v5, and unlike the
+# official Tailscale image, this one actually has it.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Least privilege: packages to publish the image, contents only so tag builds
+# can attach the tar to a release.
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # make.sh writes an OCI archive with --output type=oci, which the
+      # default "docker" driver cannot do. This installs the
+      # docker-container driver that can.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Resolve registry namespace
+        id: img
+        run: |
+          # ghcr.io requires a lowercase namespace; GitHub owners need not be.
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      # verify is the gate: it fails the run on a non-ARMv5 binary or an
+      # archive RouterOS could not import, rather than publishing something
+      # that only breaks once it is already on the router.
+      - name: Build, convert and verify
+        env:
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: ./make.sh binaries image archive verify
+
+      - name: Publish to ghcr.io
+        env:
+          IMAGE_REGISTRY: ${{ steps.img.outputs.registry }}
+          REGISTRY_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+        run: ./make.sh push
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tailscale-armv5-routeros-tar
+          path: dist/*.tar
+          if-no-files-found: error
+
+      - name: Attach archive to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/*.tar --clobber
